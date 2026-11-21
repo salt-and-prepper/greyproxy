@@ -1,8 +1,8 @@
 module github.com/greyhavenhq/greyproxy
 
-go 1.24.0
+go 1.26.0
 
-toolchain go1.24.5
+toolchain go1.26.11
 
 require (
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137
@@ -29,9 +29,9 @@ require (
 	github.com/xtaci/smux v1.5.31
 	github.com/yl2chen/cidranger v1.0.2
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
-	golang.org/x/net v0.47.0
-	golang.org/x/sys v0.38.0
-	golang.org/x/text v0.31.0
+	golang.org/x/net v0.63.0
+	golang.org/x/sys v0.50.0
+	golang.org/x/text v0.44.0
 	golang.org/x/time v0.14.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
@@ -82,11 +82,11 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.8.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
-	golang.org/x/tools v0.38.0 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	modernc.org/libc v1.67.6 // indirect
