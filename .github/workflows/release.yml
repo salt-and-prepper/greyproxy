@@ -1,40 +1,67 @@
-name: goreleaser
+name: release
 
+# Fork release (FORK.md): on a v<upstream>-ellwood.<n> tag, test, build
+# static linux binaries (not UPX-packed, so scanners can read their Go build
+# info), attest build provenance, and publish a GitHub release.
 on:
   push:
-    # run only against tags
     tags:
-      - 'v*'
+      - "v*-ellwood.*"
 
 permissions:
-  contents: write
-  # packages: write
-  # issues: write
+  contents: read
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create the release
+      id-token: write       # sign the provenance attestation
+      attestations: write   # store it
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - run: git fetch --force --tags
-      - uses: actions/setup-go@v5
+          persist-credentials: false
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
-          go-version: '1.25'
-          cache: true
-      - name: Install UPX
-        uses: crazy-max/ghaction-upx@v3
+          go-version-file: go.mod
+          cache: false
+
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test -count=1 ./...
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          VER="${GITHUB_REF_NAME#v}"
+          COMMIT="$(git rev-parse --short HEAD)"
+          DATE="$(git log -1 --format=%cI)"
+          mkdir -p dist
+          for ARCH in amd64 arm64; do
+            STAGE="$(mktemp -d)"
+            CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath \
+              -ldflags "-s -w -X main.version=${VER} -X main.buildTime=${DATE} -X main.gitCommit=${COMMIT}" \
+              -o "${STAGE}/greyproxy" ./cmd/greyproxy
+            cp LICENSE README.md "${STAGE}/"
+            tar -C "${STAGE}" --owner=0 --group=0 --numeric-owner --mtime="${DATE}" --sort=name \
+              -czf "dist/greyproxy_${VER}_linux_${ARCH}.tar.gz" greyproxy LICENSE README.md
+          done
+          (cd dist && sha256sum ./*.tar.gz | sed 's| \./| |' > checksums.txt)
+          cat dist/checksums.txt
+          go version -m "${STAGE}/greyproxy" | head -1
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          install-only: true
-      # More assembly might be required: Docker logins, GPG, etc. It all depends
-      # on your needs.
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          # either 'goreleaser' (default) or 'goreleaser-pro':
-          distribution: goreleaser
-          version: '~> v2'
-          args: release --clean
+          subject-path: dist/*.tar.gz
+
+      - name: Publish release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.tar.gz dist/checksums.txt \
+            --verify-tag --title "${GITHUB_REF_NAME}" \
+            --notes "Fork release of GreyhavenHQ/greyproxy (see FORK.md). Static linux/amd64 and linux/arm64 builds, not UPX-packed; build provenance attested (gh attestation verify <file> --repo ${GITHUB_REPOSITORY})."
