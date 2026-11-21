@@ -251,11 +251,12 @@ func (t *stdioTransport) Close() error {
 	// bound stay held until it notices or is killed by hand.
 	exited := make(chan error, 1)
 	go func() { exited <- t.cmd.Wait() }()
+	// Wait's error is irrelevant here: Close has already asked the child to stop.
 	select {
-	case <-exited:
+	case <-exited: //nolint:errcheck
 	case <-time.After(stdioCloseGrace):
 		killProcessGroup(t.cmd.Process)
-		<-exited
+		<-exited //nolint:errcheck
 	}
 	return nil
 }
